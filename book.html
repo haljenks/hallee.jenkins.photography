@@ -12,10 +12,10 @@
       <ul>
         <li><a href="index.html">Home</a></li>
         <li><a href="gallery.html">Gallery</a></li>
-        <li><a href="faq.html">FAQ</a></li>
         <li><a href="prices.html">Prices</a></li>
         <li><a href="about.html">Get to Know Me</a></li>
         <li><a href="book.html">Book a Shoot</a></li>
+        <li><a href="faq.html">FAQ</a></li>
       </ul>
     </nav>
   </header>
@@ -55,6 +55,15 @@
               <option value="phone">Phone</option>
             </select>
           </label>
+          <label>Preferred date(s):
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;margin-top:0.3rem">
+              <input type="date" id="preferred-date" />
+              <button type="button" id="add-date-btn" style="padding:0.45rem 0.7rem;border-radius:8px;border:1px solid var(--border);background:#fff;cursor:pointer">Add date</button>
+            </div>
+            <small style="color:var(--muted)">Select one or more dates that work best for you.</small>
+            <div id="selected-dates" style="display:flex;gap:0.45rem;flex-wrap:wrap;margin-top:0.45rem"></div>
+            <input type="hidden" name="preferred_dates" id="preferred_dates" />
+          </label>
           <label>Additional desires or descriptions (optional):<textarea name="details" id="details" rows="3" placeholder="Styling, locations, special requests (optional)"></textarea></label>
           <div style="display:flex;gap:0.6rem;align-items:center">
             <button type="submit" style="width:fit-content;padding:0.5rem 0.8rem;border-radius:8px;background:var(--accent);border:none;color:#fff;font-weight:700">Submit Booking Inquiry</button>
@@ -68,8 +77,73 @@
       (function(){
         const form = document.getElementById('booking-form');
         const status = document.getElementById('booking-status');
+        const dateInput = document.getElementById('preferred-date');
+        const addDateBtn = document.getElementById('add-date-btn');
+        const selectedDatesEl = document.getElementById('selected-dates');
+        const preferredDatesInput = document.getElementById('preferred_dates');
+        const selectedDates = new Set();
+
+        function formatDate(isoDate){
+          const [year, month, day] = isoDate.split('-');
+          return month + '/' + day + '/' + year;
+        }
+
+        function renderSelectedDates(){
+          selectedDatesEl.innerHTML = '';
+          const sorted = Array.from(selectedDates).sort();
+          preferredDatesInput.value = sorted.map(formatDate).join(', ');
+
+          sorted.forEach(function(isoDate){
+            const chip = document.createElement('span');
+            chip.style.display = 'inline-flex';
+            chip.style.alignItems = 'center';
+            chip.style.gap = '0.35rem';
+            chip.style.padding = '0.3rem 0.5rem';
+            chip.style.borderRadius = '999px';
+            chip.style.border = '1px solid var(--border)';
+            chip.style.background = '#fff';
+            chip.textContent = formatDate(isoDate);
+
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.textContent = 'x';
+            removeBtn.setAttribute('aria-label', 'Remove date ' + formatDate(isoDate));
+            removeBtn.style.border = 'none';
+            removeBtn.style.background = 'transparent';
+            removeBtn.style.cursor = 'pointer';
+            removeBtn.style.fontWeight = '700';
+            removeBtn.style.color = 'var(--accent)';
+            removeBtn.addEventListener('click', function(){
+              selectedDates.delete(isoDate);
+              renderSelectedDates();
+            });
+
+            chip.appendChild(removeBtn);
+            selectedDatesEl.appendChild(chip);
+          });
+        }
+
+        addDateBtn.addEventListener('click', function(){
+          if(!dateInput.value) return;
+          selectedDates.add(dateInput.value);
+          renderSelectedDates();
+          dateInput.value = '';
+        });
+
+        dateInput.addEventListener('keydown', function(e){
+          if(e.key === 'Enter'){
+            e.preventDefault();
+            addDateBtn.click();
+          }
+        });
+
         form.addEventListener('submit', async function(e){
           e.preventDefault();
+          if(selectedDates.size === 0){
+            status.style.color = 'crimson';
+            status.textContent = ' Please add at least one preferred date.';
+            return;
+          }
           status.style.color = 'var(--muted)';
           status.textContent = ' Sending...';
           const formData = new FormData(form);
@@ -86,6 +160,8 @@
               status.style.color = 'green';
               status.textContent = ' Inquiry sent - thank you! Please check your email for confirmation.';
               form.reset();
+              selectedDates.clear();
+              renderSelectedDates();
             } else {
               throw new Error('Submission failed');
             }
@@ -100,6 +176,7 @@
             const phone = document.getElementById('phone').value.trim();
             const email = document.getElementById('email').value.trim();
             const contact = document.getElementById('contact_method').value;
+            const preferredDates = preferredDatesInput.value.trim();
             const details = document.getElementById('details').value.trim();
             let body = '';
             body += 'Package: ' + pkg + '\n\n';
@@ -110,6 +187,7 @@
             body += 'Phone: ' + phone + '\n\n';
             body += 'Email: ' + email + '\n\n';
             body += 'Preferred contact method: ' + contact + '\n\n';
+            body += 'Preferred date(s): ' + preferredDates + '\n\n';
             body += 'Additional details: ' + details + '\n\n';
             body += 'Submitted from: ' + window.location.href + '\n';
             const mailto = 'mailto:hallee.jenkins04@gmail.com?subject=' + encodeURIComponent('Booking Inquiry') + '&body=' + encodeURIComponent(body);
